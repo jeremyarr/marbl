@@ -54,3 +54,4 @@ License
 -------
 
 MIT licensed. See the bundled `LICENSE <https://github.com/jeremyarr/marbl/blob/master/LICENSE>`_ file for more details.
+~
