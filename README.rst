@@ -1,4 +1,4 @@
-.. image:: docs/_static/logo_full.png
+.. image:: https://cdn.rawgit.com/jeremyarr/marbl/2770d250/docs/_static/logo_full.png
 
 .. image:: https://tactile.com.au/jenkins/buildStatus/icon?job=marbl1
     :target: https://github.com/jeremyarr/marbl
