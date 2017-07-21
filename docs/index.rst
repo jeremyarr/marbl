@@ -4,7 +4,7 @@
 Welcome to marbl
 =============================================
 
-.. image:: https://tactile.com.au/jenkins/jenkins/buildStatus/icon?job=marbl1
+.. image:: https://tactile.com.au/jenkins/buildStatus/icon?job=marbl1
     :target: https://github.com/jeremyarr/marbl
 
 .. image:: https://img.shields.io/pypi/l/marbl.svg
