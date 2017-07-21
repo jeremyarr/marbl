@@ -1,4 +1,4 @@
-.. image:: _static/logo_full.png
+.. image:: https://cdn.rawgit.com/jeremyarr/marbl/2770d250/docs/_static/logo_full.png
     :target: https://marbl.readthedocs.io
 
 Welcome to marbl
