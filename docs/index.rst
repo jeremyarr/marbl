@@ -1,5 +1,5 @@
 .. image:: https://cdn.rawgit.com/jeremyarr/marbl/2770d250/docs/_static/logo_full.png
-    :target: https://marbl.readthedocs.io
+    :target: https://getmarbl.readthedocs.io
 
 Welcome to marbl
 =============================================
