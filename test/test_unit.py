@@ -28,7 +28,7 @@ class SimpleTest(unittest.TestCase):
         pass
 
     def test_this(self):
-        self.assertEqual(1,2)
+        self.assertEqual(1,1)
 
 
 
