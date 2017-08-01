@@ -4,31 +4,11 @@ import asyncio
 
 import xmlrunner
 
-import marbl
+from test.context import marbl
 from test import common
-from test import unittest_utils
+import younit
 
 
-# @unittest.skip("skipped")
-class SimpleTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    async def async_setUp(self):
-        pass
-
-    async def async_tearDown(self):
-        pass
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_this(self):
-        self.assertEqual(1,1)
 
 
 

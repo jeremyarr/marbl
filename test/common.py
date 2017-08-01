@@ -1,21 +1,29 @@
 import unittest
+import re
 
 import marbl
+import mooq
 
 # @unittest.skip("skipped")
-class CommonTestCase(unittest.TestCase):
+class MarblTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         pass
 
     async def async_setUp(self):
-        pass
+        await self.GIVEN_InMemoryBrokerStarted("localhost",1234)
+        await self.GIVEN_ConnectionToBroker("localhost",1234,"in_memory")
 
     async def async_tearDown(self):
-        pass
+
+        await self.CloseBroker()
+        await self.StopMarbl()
+
 
     def setUp(self):
-        pass
+        self.callback_count = 0
+        self.callback_msg = ''
+        self.callback_routing_key = ''
 
     def tearDown(self):
         pass
@@ -28,3 +36,89 @@ class CommonTestCase(unittest.TestCase):
 
     def THEN_verify(self):
         pass
+
+    async def GIVEN_InMemoryBrokerStarted(self,host,port):
+        self.broker = mooq.InMemoryBroker(host=host,port=port)
+        _, launched = marbl.create_task(self.broker.run())
+        await launched
+
+    async def CloseBroker(self):
+        await self.broker.close()
+
+    async def GIVEN_ConnectionToBroker(self,host, port, broker):
+        self.conn = await mooq.connect(broker=broker,
+                                       host=host,
+                                       port=port)
+
+    async def GIVEN_ConsumerRegisteredOnNewChannel(self,*,queue_name,exchange_name,
+                exchange_type, routing_keys, callback, chan_name="chan"):
+
+
+        chan = await self.conn.create_channel()
+        setattr(self,chan_name,chan)
+
+        await chan.register_consumer( queue_name=queue_name,
+                exchange_name=exchange_name,
+                exchange_type=exchange_type,
+                routing_keys=routing_keys,
+                callback = callback
+              )
+
+    async def GIVEN_MarblSetup(self,m):
+        self.marbl_obj = m
+        await self.marbl_obj.setup()
+
+    async def GIVEN_MarblRunOnceNTimes(self,n):
+        for i in range(n):
+            await self.marbl_obj.run_once()
+
+    async def WHEN_MarblRunOnceNTimes(self,*args,**kwargs):
+        await self.GIVEN_MarblRunOnceNTimes(*args, **kwargs)
+
+    async def WHEN_ProcessEventsNTimes(self,n):
+        await self.conn.process_events(num_cycles=n)
+
+    def THEN_CallbackCalledNTimes(self,n):
+        self.assertEqual(n, self.callback_count)
+
+    def THEN_LastCallbackMessageIs(self,expected):
+        self.assertEqual(expected,self.callback_msg)
+
+    def THEN_LastCallbackMessageRegexIs(self,regexp):
+        self.assertRegex(self.callback_msg, regexp )
+
+    def THEN_LastCallbackRoutingKeyIs(self, expected):
+        self.assertEqual(expected, self.callback_routing_key)
+
+    async def callback_spy(self,resp):
+        self.callback_count = self.callback_count + 1
+        self.callback_msg = resp['msg']
+        self.callback_routing_key = resp['routing_key']
+
+    async def GIVEN_ProducerRegisteredOnNewChannel(self, 
+                exchange_name, exchange_type, chan_name="chan"):
+
+        chan = await self.conn.create_channel()
+        setattr(self, chan_name, chan)
+
+        await chan.register_producer( exchange_name=exchange_name,
+                                      exchange_type=exchange_type)
+
+    async def GIVEN_PublishMessage(self, *, 
+                exchange_name, msg, routing_key, chan_name="chan"):
+
+        chan = getattr(self, chan_name)
+        await chan.publish(msg=msg,exchange_name=exchange_name, 
+                routing_key=routing_key)
+
+    async def WHEN_MarblRunInBackground(self,*, num_cycles, interval):
+        _, launched = marbl.create_task(
+                        self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
+                      )
+        await launched
+
+    async def WHEN_MarblRunInForeground(self,*, num_cycles, interval):
+        await self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
+
+    async def StopMarbl(self, timeout=1):
+        await self.marbl_obj.stop(timeout=timeout)
