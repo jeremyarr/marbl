@@ -1,0 +1,4 @@
+coverage
+xmlrunner
+-e git+git@github.com:jeremyarr/younit.git@master#egg=younit
+-e git+git@github.com:jeremyarr/mooq.git@master#egg=mooq

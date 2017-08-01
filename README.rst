@@ -39,14 +39,14 @@ Usage
 
 
 
-More at https://marbl.readthedocs.io
--------------------------------------
+More at https://getmarbl.readthedocs.io
+------------------------------------------
 
 Project Links
--------------
+--------------
 
-- Docs: https://marbl.readthedocs.io/
-- Changelog: https://marbl.readthedocs.io/en/latest/changelog.html
+- Docs: https://getmarbl.readthedocs.io/
+- Changelog: https://getmarbl.readthedocs.io/en/latest/changelog.html
 - PyPI: https://pypi.python.org/pypi/marbl
 - Issues: https://github.com/jeremyarr/marbl/issues
 
