@@ -102,4 +102,6 @@ ENV/
 
 #custom
 test-reports/
-marbl/junk.py
+junk.py
+junk2.py
+junk3.py
