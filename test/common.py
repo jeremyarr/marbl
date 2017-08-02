@@ -17,6 +17,7 @@ class MarblTestCase(unittest.TestCase):
     async def async_tearDown(self):
 
         await self.CloseBroker()
+        await self.StopMarblsInList()
         await self.StopMarbl()
 
 
@@ -24,6 +25,7 @@ class MarblTestCase(unittest.TestCase):
         self.callback_count = 0
         self.callback_msg = ''
         self.callback_routing_key = ''
+        self.marbl_list = []
 
     def tearDown(self):
         pass
@@ -117,8 +119,42 @@ class MarblTestCase(unittest.TestCase):
                       )
         await launched
 
+    async def GIVEN_MarblRunInBackground(self,*args,**kwargs):
+        await self.WHEN_MarblRunInBackground(*args, **kwargs)
+
     async def WHEN_MarblRunInForeground(self,*, num_cycles, interval):
         await self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
 
     async def StopMarbl(self, timeout=1):
         await self.marbl_obj.stop(timeout=timeout)
+
+    async def GIVEN_NMarblsSetup(self,*, n, marbl_cls, **kwargs):
+        for _ in range(n):
+            m = marbl_cls(**kwargs)
+            self.marbl_list.append(m)
+
+    def GIVEN_TriggerIthMarblInList(self,i):
+        self.marbl_list[i].trigger = True
+
+    async def GIVEN_AllMarblsAreRunningInBackground(self,*,num_cycles, interval):
+        for m in self.marbl_list:
+            _, launched = marbl.create_task(
+                            m.run(num_cycles=num_cycles,interval=interval)
+                          )
+            await launched
+
+    def THEN_AllMarblsAreNotRunning(self):
+        [self.assertFalse(m.is_running()) for m in self.marbl_list]
+
+    def THEN_AllMarblsAreRunning(self):
+        [self.assertTrue(m.is_running()) for m in self.marbl_list]
+
+    async def StopMarblsInList(self, timeout=1):
+        for m in self.marbl_list:
+            await m.stop(timeout=timeout)
+
+    def THEN_AllMarblsAreTriggered(self):
+        [self.assertTrue(m.is_triggered()) for m in self.marbl_list]
+
+    def THEN_AllMarblsAreNotTriggered(self):
+        [self.assertFalse(m.is_triggered()) for m in self.marbl_list]

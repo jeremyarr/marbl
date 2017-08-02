@@ -9,3 +9,9 @@ class MessageProcessor(Marbl):
 
     async def main(self):
         await self._conn.process_events(num_cycles=1)
+
+    async def pre_run(self):
+        pass
+
+    async def post_run(self):
+        pass

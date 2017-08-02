@@ -86,6 +86,11 @@ class LogProcessor(Marbl):
                     routing_key=topic
                   )
 
+    async def pre_run(self):
+        pass
+
+    async def post_run(self):
+        pass
 
     def _create_logger(self):
         logger = logging.getLogger(self._app_name)
