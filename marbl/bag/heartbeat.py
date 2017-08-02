@@ -33,4 +33,8 @@ class Heartbeat(Marbl):
                 routing_key=""
               )
 
+    async def pre_run(self):
+        pass
 
+    async def post_run(self):
+        pass

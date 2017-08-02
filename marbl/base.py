@@ -28,12 +28,14 @@ class MutableBool(object):
                    )
 
 
-def mark_as_running(func):
+def runner(func):
     async def inner(self, *args, **kwargs):
         self.running.set_()
         self.has_stopped = asyncio.get_event_loop().create_future()
         try:
+            await self.pre_run()
             await func(self, *args, **kwargs)
+            await self.post_run()
         finally:
             self.running.clear()
             self.has_stopped.set_result(None)
@@ -50,26 +52,34 @@ class Marbl(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    async def pre_run(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
     async def main(self, *args, **kwargs):
         pass
 
+    @abstractmethod
+    async def post_run(self, *args, **kwargs):
+        pass
 
-    @mark_as_running
-    async def run_once(self):
-        await self.main()
+
+    @runner
+    async def run_once(self,*, main_args=(), main_kwargs={}):
+        await self.main(*main_args,**main_kwargs)
 
 
-    @mark_as_running
-    async def run(self, *, num_cycles=None, interval=1):
+    @runner
+    async def run(self, *, num_cycles=None, interval=1, main_args=(), main_kwargs={}):
         cnt = 0
 
         while True:
-            brk = await self.main()
+            brk = await self.main(*main_args,**main_kwargs)
 
             if interval != 0:
                 await self.sleep_lightly(interval)
 
-            if self.triggered:
+            if self.trigger:
                 break
 
             if num_cycles is not None:
@@ -80,7 +90,7 @@ class Marbl(metaclass=ABCMeta):
 
 
     async def stop(self, timeout=1):
-        self.triggered.set_()
+        self.trigger.set_()
         try:
             done, pending = await asyncio.wait([self.has_stopped], timeout=timeout)
         except AttributeError:
@@ -90,10 +100,10 @@ class Marbl(metaclass=ABCMeta):
                 raise StopTimeout
 
     async def sleep_lightly(self,interval):
-        num_cycles,frac_secs = divmod(interval,0.1)
+        num_cycles,frac_secs = divmod(interval, 0.1)
 
         for x in range(int(num_cycles)):
-            if self.triggered:
+            if self.trigger:
                 return
             else:
                 await asyncio.sleep(0.1)
@@ -104,13 +114,30 @@ class Marbl(metaclass=ABCMeta):
     def is_running(self):
         return self.running == True
 
+    def is_triggered(self):
+        return self.trigger == True
+
     @property
-    def triggered(self):
+    def trigger(self):
         try:
-            return self._triggered
+            return self._trigger
         except AttributeError:
-            self._triggered = MutableBool(False)
-            return self._triggered
+            self._trigger = MutableBool(False)
+            return self._trigger
+
+    @trigger.setter
+    def trigger(self, val):
+        if type(val) != bool:
+            raise TypeError("trigger must be set to True or False")
+
+        if not hasattr(self,"_trigger"):
+            self._trigger = MutableBool(False)
+
+        if val:
+            self._trigger.set_()
+        else:
+            self._trigger.clear()
+
 
     @property
     def running(self):

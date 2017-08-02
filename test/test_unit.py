@@ -311,6 +311,71 @@ class LogProcessorTest(common.MarblTestCase):
         self.THEN_LastCallbackMessageRegexIs(".*: {}: fake_micro: marbl \({}\): fake_msg".format(severity.upper(), os.getpid()))
         self.THEN_LastCallbackRoutingKeyIs("fake_micro.marbl.{}.{}".format(os.getpid(), severity))
 
+
+# @unittest.skip("skipped") 
+class MonitorTriggererTest(common.MarblTestCase):
+
+    async def async_setUp(self):
+        await super().async_setUp()
+
+        await self.GIVEN_NMarblsSetup(
+            n=10, marbl_cls=marbl.bag.Dummy)
+
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Monitor(marbl_list=self.marbl_list, action="trigger")
+              )
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_one_triggers_all(self):
+        self.GIVEN_TriggerIthMarblInList(4)
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_no_triggers(self):
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreNotTriggered()
+
+
+
+# @unittest.skip("skipped") 
+class MonitorStopperTest(common.MarblTestCase):
+
+    async def async_setUp(self):
+        await super().async_setUp()
+
+        await self.GIVEN_NMarblsSetup(
+            n=10, marbl_cls=marbl.bag.Dummy, 
+            sleep_for=0,
+            sleep_lightly_for=5)
+
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Monitor(marbl_list=self.marbl_list)
+              )
+        await self.GIVEN_AllMarblsAreRunningInBackground(num_cycles=2, interval=2)
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_one_stops_all(self):
+        self.GIVEN_TriggerIthMarblInList(4)
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreNotRunning()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_no_triggers_no_stops(self):
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreRunning()
+
+
+
+
+
+
+
 if __name__ == '__main__':
     unittest.main(
         testRunner=xmlrunner.XMLTestRunner(output='test-reports'),
