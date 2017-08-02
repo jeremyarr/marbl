@@ -90,12 +90,53 @@ class DummyTest(common.MarblTestCase):
         with self.assertRaises(marbl.StopTimeout):
             await self.StopMarbl(timeout=0.02)
 
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_not_triggered(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
 
-    def THEN_MarblIsNotRunning(self):
-        self.assertFalse(self.marbl_obj.is_running())
+        self.THEN_MarblIsNotTriggered()
 
-    def THEN_MarblIsRunning(self):
-        self.assertTrue(self.marbl_obj.is_running())
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_triggered(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        self.WHEN_TriggerMarbl()
+
+        self.THEN_MarblIsTriggered()
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_triggered_if_error_occurs_when_running_once(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(raise_error=ValueError)
+              )
+
+        with self.assertRaises(ValueError):
+            await self.WHEN_MarblRunOnceNTimes(1)
+
+        self.THEN_MarblIsTriggered()
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_triggered_if_error_occurs_when_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(raise_error=ValueError)
+              )
+
+        with self.assertRaises(ValueError):
+            await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+
+        self.THEN_MarblIsTriggered()
+
+
 
     def THEN_Version(self,x):
         self.assertEqual(x, self.marbl_obj.version)

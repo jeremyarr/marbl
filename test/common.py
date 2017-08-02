@@ -133,8 +133,7 @@ class MarblTestCase(unittest.TestCase):
             m = marbl_cls(**kwargs)
             self.marbl_list.append(m)
 
-    def GIVEN_TriggerIthMarblInList(self,i):
-        self.marbl_list[i].trigger = True
+
 
     async def GIVEN_AllMarblsAreRunningInBackground(self,*,num_cycles, interval):
         for m in self.marbl_list:
@@ -158,3 +157,21 @@ class MarblTestCase(unittest.TestCase):
 
     def THEN_AllMarblsAreNotTriggered(self):
         [self.assertFalse(m.is_triggered()) for m in self.marbl_list]
+
+    def THEN_MarblIsNotRunning(self):
+        self.assertFalse(self.marbl_obj.is_running())
+
+    def THEN_MarblIsRunning(self):
+        self.assertTrue(self.marbl_obj.is_running())
+
+    def THEN_MarblIsNotTriggered(self):
+        self.assertFalse(self.marbl_obj.is_triggered())
+
+    def THEN_MarblIsTriggered(self):
+        self.assertTrue(self.marbl_obj.is_triggered())
+
+    def GIVEN_TriggerIthMarblInList(self,i):
+        self.marbl_list[i].trigger = True
+
+    def WHEN_TriggerMarbl(self):
+        self.marbl_obj.trigger = True

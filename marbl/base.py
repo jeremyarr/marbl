@@ -36,6 +36,9 @@ def runner(func):
             await self.pre_run()
             await func(self, *args, **kwargs)
             await self.post_run()
+        except Exception as e:
+            self.trigger = True
+            raise
         finally:
             self.running.clear()
             self.has_stopped.set_result(None)
