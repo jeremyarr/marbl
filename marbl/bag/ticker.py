@@ -2,7 +2,7 @@ import os
 
 from ..base import Marbl
 
-class Heartbeat(Marbl):
+class Ticker(Marbl):
     def __init__(self, *, conn, parent_name, parent_version):
         self._conn = conn
         self._tick = 0

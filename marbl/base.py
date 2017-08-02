@@ -30,7 +30,7 @@ class MutableBool(object):
 
 def runner(func):
     async def inner(self, *args, **kwargs):
-        self.running.set_()
+        self._running.set_()
         self.has_stopped = asyncio.get_event_loop().create_future()
         try:
             await self.pre_run()
@@ -40,7 +40,7 @@ def runner(func):
             self.trigger = True
             raise
         finally:
-            self.running.clear()
+            self._running.clear()
             self.has_stopped.set_result(None)
 
     return inner
@@ -93,7 +93,8 @@ class Marbl(metaclass=ABCMeta):
 
 
     async def stop(self, timeout=1):
-        self.trigger.set_()
+        self.trigger = True
+
         try:
             done, pending = await asyncio.wait([self.has_stopped], timeout=timeout)
         except AttributeError:
@@ -115,7 +116,7 @@ class Marbl(metaclass=ABCMeta):
 
 
     def is_running(self):
-        return self.running == True
+        return self._running == True
 
     def is_triggered(self):
         return self.trigger == True
@@ -143,12 +144,12 @@ class Marbl(metaclass=ABCMeta):
 
 
     @property
-    def running(self):
+    def _running(self):
         try:
-            return self._running
+            return self._running_internal
         except AttributeError:
-            self._running = MutableBool(False)
-            return self._running
+            self._running_internal = MutableBool(False)
+            return self._running_internal
 
 
 

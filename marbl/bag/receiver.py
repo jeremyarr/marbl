@@ -1,6 +1,6 @@
 from ..base import Marbl
 
-class MessageProcessor(Marbl):
+class Receiver(Marbl):
     def __init__(self, *, conn):
         self._conn = conn
 

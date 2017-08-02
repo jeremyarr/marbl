@@ -193,7 +193,7 @@ class SleepLightlyTest(common.MarblTestCase):
 
 
 # @unittest.skip("skipped") 
-class HeartbeatTest(common.MarblTestCase):
+class TickerTest(common.MarblTestCase):
 
     async def async_setUp(self):
         await super().async_setUp()
@@ -206,7 +206,7 @@ class HeartbeatTest(common.MarblTestCase):
                 callback = self.callback_spy
               )
         await self.GIVEN_MarblSetup(
-                marbl.bag.Heartbeat(
+                marbl.bag.Ticker(
                     conn=self.conn,
                     parent_name="fake_parent",
                     parent_version="fake_version"
@@ -257,7 +257,7 @@ class HeartbeatTest(common.MarblTestCase):
 
 
 # @unittest.skip("skipped") 
-class MessageProcessorTest(common.MarblTestCase):
+class ReceiverTest(common.MarblTestCase):
 
     async def async_setUp(self):
         await super().async_setUp()
@@ -275,7 +275,7 @@ class MessageProcessorTest(common.MarblTestCase):
                 chan_name="chan2"
               )
         await self.GIVEN_MarblSetup(
-                marbl.bag.MessageProcessor(conn=self.conn)
+                marbl.bag.Receiver(conn=self.conn)
               )
 
 
@@ -297,7 +297,7 @@ class MessageProcessorTest(common.MarblTestCase):
         self.THEN_LastCallbackMessageIs("fake message")
 
 # @unittest.skip("skipped") 
-class LogProcessorTest(common.MarblTestCase):
+class LoggerTest(common.MarblTestCase):
 
     async def async_setUp(self):
         await super().async_setUp()
@@ -309,7 +309,7 @@ class LogProcessorTest(common.MarblTestCase):
                 callback = self.callback_spy,
               )
         await self.GIVEN_MarblSetup(
-                marbl.bag.LogProcessor(conn=self.conn, marbl_name="fake_micro")
+                marbl.bag.Logger(conn=self.conn, marbl_name="fake_micro")
               )
 
     # @unittest.skip("skipped")
