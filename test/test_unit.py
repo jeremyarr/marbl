@@ -209,7 +209,8 @@ class TickerTest(common.MarblTestCase):
                 marbl.bag.Ticker(
                     conn=self.conn,
                     parent_name="fake_parent",
-                    parent_version="fake_version"
+                    parent_version="fake_version",
+                    show=False
                 )
               )
 

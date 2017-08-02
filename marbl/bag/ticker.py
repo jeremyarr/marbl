@@ -3,12 +3,13 @@ import os
 from ..base import Marbl
 
 class Ticker(Marbl):
-    def __init__(self, *, conn, parent_name, parent_version):
+    def __init__(self, *, conn, parent_name, parent_version, show=True):
         self._conn = conn
         self._tick = 0
         self._parent_version = parent_version
         self._parent_name = parent_name
         self._pid = os.getpid()
+        self._show = show
 
     async def setup(self):
         self._chan = await self._conn.create_channel()
@@ -32,6 +33,10 @@ class Ticker(Marbl):
                 msg=self._construct_msg(),
                 routing_key=""
               )
+        if self._show:
+            print("tick {} {} {} ({})".format(
+                    self._tick, self._parent_name, 
+                    self._parent_version, self._pid))
 
     async def pre_run(self):
         pass
