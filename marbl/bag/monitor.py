@@ -12,16 +12,18 @@ class Monitor(Marbl):
 
     async def main(self):
         take_action = False
+
         for m in self._marbl_list:
-            if m.is_triggered():
+            if m.is_triggered() and m.trigger.cause != "stop":
                 take_action = True
+                root_trigger = m
                 break
 
         if take_action:
             if self._action=="stop":
-                await asyncio.gather(*[m.stop() for m in self._marbl_list])
+                await asyncio.gather(*[m.stop() for m in self._marbl_list if m != root_trigger])
             else:
-                [setattr(m, "trigger", True) for m in self._marbl_list]
+                [m.trigger.set_as_cascade() for m in self._marbl_list if m != root_trigger]
 
 
     async def pre_run(self):

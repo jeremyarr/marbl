@@ -113,8 +113,14 @@ class MarblTestCase(unittest.TestCase):
         await chan.publish(msg=msg,exchange_name=exchange_name, 
                 routing_key=routing_key)
 
+    # async def WHEN_MarblRunInBackground(self,*, num_cycles, interval):
+    #     _, launched = marbl.create_task(
+    #                     self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
+    #                   )
+    #     await launched
+
     async def WHEN_MarblRunInBackground(self,*, num_cycles, interval):
-        _, launched = marbl.create_task(
+        _, launched = self.marbl_obj.create_task(
                         self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
                       )
         await launched
@@ -128,17 +134,18 @@ class MarblTestCase(unittest.TestCase):
     async def StopMarbl(self, timeout=1):
         await self.marbl_obj.stop(timeout=timeout)
 
+
+
     async def GIVEN_NMarblsSetup(self,*, n, marbl_cls, **kwargs):
         for _ in range(n):
             m = marbl_cls(**kwargs)
             self.marbl_list.append(m)
 
-    def GIVEN_TriggerIthMarblInList(self,i):
-        self.marbl_list[i].trigger = True
+
 
     async def GIVEN_AllMarblsAreRunningInBackground(self,*,num_cycles, interval):
         for m in self.marbl_list:
-            _, launched = marbl.create_task(
+            _, launched = self.marbl_obj.create_task(
                             m.run(num_cycles=num_cycles,interval=interval)
                           )
             await launched
@@ -149,6 +156,13 @@ class MarblTestCase(unittest.TestCase):
     def THEN_AllMarblsAreRunning(self):
         [self.assertTrue(m.is_running()) for m in self.marbl_list]
 
+    def THEN_AllMarblsAreRunningExcept(self,n):
+        for i, m in enumerate(self.marbl_list):
+            if i != n:
+                self.assertTrue(m.is_running())
+
+
+
     async def StopMarblsInList(self, timeout=1):
         for m in self.marbl_list:
             await m.stop(timeout=timeout)
@@ -158,3 +172,60 @@ class MarblTestCase(unittest.TestCase):
 
     def THEN_AllMarblsAreNotTriggered(self):
         [self.assertFalse(m.is_triggered()) for m in self.marbl_list]
+
+    def THEN_AllMarblsAreNotTriggeredExcept(self,n):
+        for i, m in enumerate(self.marbl_list):
+            if i != n:
+                self.assertFalse(m.is_triggered())
+
+    def THEN_AllMarblsAreTriggeredAsCascadeExcept(self,n):
+        for i, m in enumerate(self.marbl_list):
+            if i != n:
+                self.assertTrue(m.is_triggered())
+                self.assertEqual("cascade", m.trigger.cause)
+
+    def THEN_MarblIsNotRunning(self):
+        self.assertFalse(self.marbl_obj.is_running())
+
+    def THEN_MarblIsRunning(self):
+        self.assertTrue(self.marbl_obj.is_running())
+
+    def THEN_MarblIsNotTriggered(self):
+        self.assertFalse(self.marbl_obj.is_triggered())
+
+    def THEN_MarblIsTriggered(self):
+        self.assertTrue(self.marbl_obj.is_triggered())
+
+    def GIVEN_TriggerIthMarblInListAsStop(self,i):
+        self.marbl_list[i].trigger.set_as_stop()
+
+    def GIVEN_TriggerIthMarblInListAsError(self,i):
+        self.marbl_list[i].trigger.set_as_error(ValueError(),"fake_tb_str")
+
+    def WHEN_TriggerMarblAsError(self,*,exc_obj,tb_str):
+        self.marbl_obj.trigger.set_as_error(exc_obj, tb_str)
+
+    def GIVEN_TriggerMarblAsError(self,*args, **kwargs):
+        self.WHEN_TriggerMarblAsError(*args, **kwargs)
+
+
+    def GIVEN_TriggerMarblAsStop(self):
+        self.marbl_obj.trigger.set_as_stop()
+
+    async def WHEN_MarblRunOnceInBackground(self):
+        _, launched = self.marbl_obj.create_task(
+                        self.marbl_obj.run_once()
+                      )
+        await launched
+
+    def THEN_MarblIsTriggeredWithCause(self,cause,*, error_type=None):
+        self.assertTrue(self.marbl_obj.trigger)
+        self.assertEqual(cause, self.marbl_obj.trigger.cause)
+        self.assertEqual(error_type, self.marbl_obj.trigger.error_type)
+        if cause=="error":
+            self.assertIsNotNone(self.marbl_obj.trigger.error_traceback)
+        else:
+            self.assertIsNone(self.marbl_obj.trigger.error_traceback)
+
+    async def GIVEN_StopIthMarbl(self,i,timeout=1):
+        await self.marbl_list[i].stop(timeout=timeout)

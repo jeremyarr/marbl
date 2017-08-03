@@ -59,7 +59,8 @@ class RabbitMQHandler(logging.Handler):
 
 
 #this should only be added to the root marbl
-class LogProcessor(Marbl):
+#TODO investigate logger as class attribute set here and available in all Marbls
+class Logger(Marbl):
     def __init__(self, *, conn, marbl_name, app_name="marbl"):
         self._conn = conn
         self._marbl_name = marbl_name
