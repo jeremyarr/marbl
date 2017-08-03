@@ -15,26 +15,6 @@ import time
 # @unittest.skip("skipped") 
 class DummyTest(common.MarblTestCase):
 
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_running(self):
-        await self.GIVEN_MarblSetup(
-                marbl.bag.Dummy()
-              )
-
-        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=1)
-        self.THEN_MarblIsRunning()
-
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_not_running_after_finished_running(self):
-        await self.GIVEN_MarblSetup(
-                marbl.bag.Dummy()
-              )
-
-        await self.WHEN_MarblRunOnceNTimes(1)
-
-        self.THEN_MarblIsNotRunning()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -45,6 +25,53 @@ class DummyTest(common.MarblTestCase):
 
         self.THEN_MarblIsNotRunning()
 
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=1)
+        self.THEN_MarblIsRunning()
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_running_once(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunOnceInBackground()
+        self.THEN_MarblIsRunning()
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_not_running_after_finished_running_once(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunOnceNTimes(1)
+
+        self.THEN_MarblIsNotRunning()
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_not_running_after_finished_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunInForeground(num_cycles=1, interval=0.01)
+
+        self.THEN_MarblIsNotRunning()
+
+
     # @unittest.skip("skipped")
     @younit.asyncio_test
     async def test_not_running_if_error_occurs_when_running_once(self):
@@ -52,8 +79,7 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy(raise_error=ValueError)
               )
 
-        with self.assertRaises(ValueError):
-            await self.WHEN_MarblRunOnceNTimes(1)
+        await self.WHEN_MarblRunOnceNTimes(1)
 
         self.THEN_MarblIsNotRunning()
 
@@ -64,8 +90,7 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy(raise_error=ValueError)
               )
 
-        with self.assertRaises(ValueError):
-            await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+        await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
 
         self.THEN_MarblIsNotRunning()
 
@@ -106,9 +131,9 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy()
               )
 
-        self.WHEN_TriggerMarbl()
+        self.WHEN_TriggerMarblAsError(exc_obj=ValueError(),tb_str="fake_tb_str")
 
-        self.THEN_MarblIsTriggered()
+        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
 
 
     # @unittest.skip("skipped")
@@ -118,10 +143,11 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy(raise_error=ValueError)
               )
 
-        with self.assertRaises(ValueError):
-            await self.WHEN_MarblRunOnceNTimes(1)
 
-        self.THEN_MarblIsTriggered()
+        await self.WHEN_MarblRunOnceNTimes(1)
+
+
+        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
 
 
     # @unittest.skip("skipped")
@@ -131,16 +157,109 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy(raise_error=ValueError)
               )
 
-        with self.assertRaises(ValueError):
-            await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+        await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+
+        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_triggered_after_running_once(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunOnceNTimes(1)
 
         self.THEN_MarblIsTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_triggered_after_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy()
+              )
+
+        await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+
+        self.THEN_MarblIsTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_reset_before_running_once_again(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(sleep_lightly_for=5)
+              )
+
+        self.GIVEN_TriggerMarblAsStop()
+
+        await self.WHEN_MarblRunOnceInBackground()
+
+        self.THEN_MarblIsRunning()
+        self.THEN_MarblIsNotTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_reset_before_running_again(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(sleep_lightly_for=5)
+              )
+
+        self.GIVEN_TriggerMarblAsStop()
+
+        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+
+        self.THEN_MarblIsRunning()
+        self.THEN_MarblIsNotTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_cant_run_or_run_once_in_foreground_if_already_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(sleep_lightly_for=5)
+              )
+
+        await self.GIVEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+
+        #WHEN_THEN
+        #foreground coros dont need to be checked for triggering as
+        #error can be caught directly
+
+        with self.assertRaises(marbl.AlreadyRunning):
+            await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+
+        with self.assertRaises(marbl.AlreadyRunning):
+            await self.WHEN_MarblRunOnceNTimes(1)
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_cant_run_as_background_task_if_already_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(sleep_lightly_for=5)
+              )
+
+        await self.GIVEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+
+        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+
+        self.THEN_MarblIsTriggeredWithCause("error",error_type=marbl.AlreadyRunning)
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_cant_run_once_as_background_task_if_already_running(self):
+        await self.GIVEN_MarblSetup(
+                marbl.bag.Dummy(sleep_lightly_for=5)
+              )
+
+        await self.GIVEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+
+        await self.WHEN_MarblRunOnceInBackground()
+
+        self.THEN_MarblIsTriggeredWithCause("error",error_type=marbl.AlreadyRunning)
 
 
 
     def THEN_Version(self,x):
         self.assertEqual(x, self.marbl_obj.version)
-
 
 
 
@@ -369,10 +488,17 @@ class MonitorTriggererTest(common.MarblTestCase):
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
-    async def test_trigger_one_triggers_all(self):
-        self.GIVEN_TriggerIthMarblInList(4)
+    async def test_trigger_one_as_stop_doesnt_trigger_all(self):
+        self.GIVEN_TriggerIthMarblInListAsStop(4)
         await self.WHEN_MarblRunOnceNTimes(1)
-        self.THEN_AllMarblsAreTriggered()
+        self.THEN_AllMarblsAreNotTriggeredExcept(4)
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_one_as_error_triggers_all_as_cascade(self):
+        self.GIVEN_TriggerIthMarblInListAsError(4)
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreTriggeredAsCascadeExcept(4)
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -401,8 +527,16 @@ class MonitorStopperTest(common.MarblTestCase):
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
+    async def test_stop_one_doesnt_stop_all(self):
+        await self.GIVEN_StopIthMarbl(4)
+        await self.WHEN_MarblRunOnceNTimes(1)
+        self.THEN_AllMarblsAreRunningExcept(4)
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
     async def test_trigger_one_stops_all(self):
-        self.GIVEN_TriggerIthMarblInList(4)
+        self.GIVEN_TriggerIthMarblInListAsError(4)
         await self.WHEN_MarblRunOnceNTimes(1)
         self.THEN_AllMarblsAreNotRunning()
 

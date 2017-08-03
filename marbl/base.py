@@ -1,7 +1,11 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
+import traceback
 
 class StopTimeout(Exception):
+    pass
+
+class AlreadyRunning(Exception):
     pass
 
 class MutableBool(object):
@@ -27,9 +31,43 @@ class MutableBool(object):
                            hex(id(self))
                    )
 
+class Trigger(MutableBool):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+        self._clear_trigger_metadata()
+
+
+    def set_as_error(self, exc_obj, tb_str):
+        self.set_()
+        self.cause = "error"
+        self.error_type = type(exc_obj)
+        self.error_traceback = tb_str
+
+    def set_as_stop(self):
+        self.set_()
+        self.cause = "stop"
+
+    def set_as_cascade(self):
+        self.set_()
+        self.cause = "cascade"
+
+    def clear(self):
+        self._x = False
+        self._clear_trigger_metadata()
+
+    def _clear_trigger_metadata(self):
+        self.cause = None
+        self.error_type = None
+        self.error_traceback = None
+
 
 def runner(func):
     async def inner(self, *args, **kwargs):
+
+        if self.is_running():
+            raise AlreadyRunning
+
+        self.trigger.clear()
         self._running.set_()
         self.has_stopped = asyncio.get_event_loop().create_future()
         try:
@@ -37,11 +75,16 @@ def runner(func):
             await func(self, *args, **kwargs)
             await self.post_run()
         except Exception as e:
-            self.trigger = True
-            raise
+            tb_str = traceback.format_exc()
+            # print("AN ERRRORRRRRRRRRRR")
+            # print(tb_str)
+            self.trigger.set_as_error(e, tb_str)
+        else:
+            self.trigger.set_as_stop()
         finally:
             self._running.clear()
             self.has_stopped.set_result(None)
+
 
     return inner
 
@@ -66,12 +109,12 @@ class Marbl(metaclass=ABCMeta):
     async def post_run(self, *args, **kwargs):
         pass
 
-
+    # @consume_exceptions
     @runner
     async def run_once(self,*, main_args=(), main_kwargs={}):
         await self.main(*main_args,**main_kwargs)
 
-
+    # @consume_exceptions
     @runner
     async def run(self, *, num_cycles=None, interval=1, main_args=(), main_kwargs={}):
         cnt = 0
@@ -93,7 +136,7 @@ class Marbl(metaclass=ABCMeta):
 
 
     async def stop(self, timeout=1):
-        self.trigger = True
+        self.trigger.set_as_stop()
 
         try:
             done, pending = await asyncio.wait([self.has_stopped], timeout=timeout)
@@ -126,22 +169,8 @@ class Marbl(metaclass=ABCMeta):
         try:
             return self._trigger
         except AttributeError:
-            self._trigger = MutableBool(False)
+            self._trigger = Trigger(False)
             return self._trigger
-
-    @trigger.setter
-    def trigger(self, val):
-        if type(val) != bool:
-            raise TypeError("trigger must be set to True or False")
-
-        if not hasattr(self,"_trigger"):
-            self._trigger = MutableBool(False)
-
-        if val:
-            self._trigger.set_()
-        else:
-            self._trigger.clear()
-
 
     @property
     def _running(self):
@@ -151,6 +180,33 @@ class Marbl(metaclass=ABCMeta):
             self._running_internal = MutableBool(False)
             return self._running_internal
 
+    def create_task(self, coro_obj):
+        '''
+        wrapper for creating a task that can be used for waiting
+        until a task has started.
+
+        :param coro_obj: coroutine object to schedule
+        :returns: a two element tuple where the first element
+            is the task object. Awaiting on this will return when
+            the coroutine object is done executing. The second element
+            is a future that becomes done when the coroutine object is started.
+
+        .. note:: must only be called from within the thread
+            where the event loop resides
+        '''
+
+        loop = asyncio.get_event_loop()
+
+        async def task_wrapper(coro_obj, launched):
+            try:
+                launched.set_result(True)
+                await coro_obj
+            except Exception as e:
+                tb_str = traceback.format_exc()
+                # print("AN ERRRORRRRRRRRRRR")
+                # print(tb_str)
+                self.trigger.set_as_error(e, tb_str)
 
 
-
+        launched = loop.create_future()
+        return loop.create_task(task_wrapper(coro_obj, launched)), launched

@@ -6,7 +6,7 @@ marbl is an asyncio microservices framework.
 from .__version__ import __version__
 
 from .utils import create_task
-from .base import Marbl, StopTimeout
+from .base import Marbl, StopTimeout, AlreadyRunning
 from . import bag
 
 
