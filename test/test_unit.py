@@ -551,9 +551,97 @@ class MonitorStopperTest(common.MarblTestCase):
         self.THEN_AllMarblsAreRunning()
 
 
+# @unittest.skip("skipped") 
+class RemoteControlTest(common.MarblTestCase):
+
+    async def async_setUp(self):
+        await super().async_setUp()
+
+        await self.GIVEN_MarblSetup(
+                marbl.bag.RemoteControl(conn=self.conn, marbl_name="fake_marbl")
+              )
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_globally(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("all.all.all")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_wrong_marbl(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("blah.all.all")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsNotTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_right_marbl(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("fake_marbl.all.all")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_right_pid(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("all.{}.all".format(os.getpid()))
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_wrong_pid(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("all.1234.all")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsNotTriggered()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_right_marbl_version(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("fake_marbl.all.not_set")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_remote_stop_issued_to_wrong_marbl_version(self):
+        # (micro_typ | all).(pid | all).(version | all)
+        await self.GIVEN_SendRemoteStopCommandWithRoutingKey("fake_marbl.all.wrong_version")
+
+        await self.WHEN_ProcessEventsNTimes(20)
+        
+        self.THEN_MarblIsNotTriggered()
 
 
 
+
+
+    async def GIVEN_SendRemoteStopCommandWithRoutingKey(self, routing_key):
+        await self.GIVEN_ProducerRegisteredOnNewChannel( 
+                        exchange_name="supervisor", exchange_type="topic")
+
+        await self.GIVEN_PublishMessage(exchange_name="supervisor", msg=["stop"], 
+                routing_key=routing_key)
 
 
 if __name__ == '__main__':

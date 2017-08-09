@@ -53,6 +53,10 @@ class Trigger(MutableBool):
         self.set_()
         self.cause = "cascade"
 
+    def set_as_remote_stop(self):
+        self.set_()
+        self.cause = "remote_stop"
+
     def clear(self):
         self._x = False
         self._clear_trigger_metadata()
