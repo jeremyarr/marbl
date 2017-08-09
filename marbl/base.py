@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 import asyncio
 import traceback
 
+from .utils import create_multiple_tasks
+
 class StopTimeout(Exception):
     pass
 
@@ -63,6 +65,11 @@ class Trigger(MutableBool):
 
 def runner(func):
     async def inner(self, *args, **kwargs):
+        try:
+            show_errors=kwargs['show_errors']
+        except KeyError:
+            show_errors=True
+
 
         if self.is_running():
             raise AlreadyRunning
@@ -71,13 +78,14 @@ def runner(func):
         self._running.set_()
         self.has_stopped = asyncio.get_event_loop().create_future()
         try:
-            await self.pre_run()
+            await self._pre_run()
             await func(self, *args, **kwargs)
             await self.post_run()
         except Exception as e:
             tb_str = traceback.format_exc()
-            # print("AN ERRRORRRRRRRRRRR")
-            # print(tb_str)
+            if show_errors:
+                print("AN ERRROR OCCURRED")
+                print(tb_str)
             self.trigger.set_as_error(e, tb_str)
         else:
             self.trigger.set_as_stop()
@@ -97,26 +105,51 @@ class Marbl(metaclass=ABCMeta):
     async def setup(self, *args, **kwargs):
         pass
 
-    @abstractmethod
-    async def pre_run(self, *args, **kwargs):
-        pass
+    def register(self, *args, **kwargs):
+        return []
+
+    async def _pre_run(self):
+        registry = self.register()
+        to_monitor = []
+        to_schedule = []
+
+        for r in registry:
+            await r['marbl_obj'].setup()
+            if r['monitor']:
+                to_monitor.append(r['marbl_obj'])
+
+            if r['run_method'] == "run":
+                coro_obj = r['marbl_obj'].run(interval=r['interval'])
+                to_schedule.append(coro_obj)
+            else:
+                raise NotImplementedError
+
+        #must always monitor yourself to see if any sub tasks
+        #have caused trigger to be set
+        if to_monitor:
+            # to_monitor.append(self)
+            mon = Monitor(marbl_list=to_monitor, root_marbl=self)
+            to_schedule.append(mon.run(interval=0.1))
+
+        await create_multiple_tasks(to_schedule)
+
+
 
     @abstractmethod
     async def main(self, *args, **kwargs):
         pass
 
-    @abstractmethod
     async def post_run(self, *args, **kwargs):
         pass
 
     # @consume_exceptions
     @runner
-    async def run_once(self,*, main_args=(), main_kwargs={}):
+    async def run_once(self,*, main_args=(), main_kwargs={}, show_errors=True):
         await self.main(*main_args,**main_kwargs)
 
     # @consume_exceptions
     @runner
-    async def run(self, *, num_cycles=None, interval=1, main_args=(), main_kwargs={}):
+    async def run(self, *, num_cycles=None, interval=1, main_args=(), main_kwargs={}, show_errors=True):
         cnt = 0
 
         while True:
@@ -135,7 +168,8 @@ class Marbl(metaclass=ABCMeta):
                     break
 
 
-    async def stop(self, timeout=1):
+    async def stop(self, timeout=5):
+        # print("stopping {}".format(self.__class__.__name__))
         self.trigger.set_as_stop()
 
         try:
@@ -145,6 +179,7 @@ class Marbl(metaclass=ABCMeta):
         else:
             if pending:
                 raise StopTimeout
+        # print("stopped {}".format(self.__class__.__name__))
 
     async def sleep_lightly(self,interval):
         num_cycles,frac_secs = divmod(interval, 0.1)
@@ -156,7 +191,6 @@ class Marbl(metaclass=ABCMeta):
                 await asyncio.sleep(0.1)
 
         await asyncio.sleep(frac_secs)
-
 
     def is_running(self):
         return self._running == True
@@ -180,7 +214,7 @@ class Marbl(metaclass=ABCMeta):
             self._running_internal = MutableBool(False)
             return self._running_internal
 
-    def create_task(self, coro_obj):
+    def create_task(self, coro_obj, show_errors=True):
         '''
         wrapper for creating a task that can be used for waiting
         until a task has started.
@@ -203,10 +237,50 @@ class Marbl(metaclass=ABCMeta):
                 await coro_obj
             except Exception as e:
                 tb_str = traceback.format_exc()
-                # print("AN ERRRORRRRRRRRRRR")
-                # print(tb_str)
+                if show_errors:
+                    print("AN ERRROR OCCURRED")
+                    print(tb_str)
                 self.trigger.set_as_error(e, tb_str)
 
 
         launched = loop.create_future()
         return loop.create_task(task_wrapper(coro_obj, launched)), launched
+
+class Monitor(Marbl):
+    def __init__(self, *, marbl_list, root_marbl, action="stop"):
+        self._marbl_list = marbl_list
+        self._root_marbl = root_marbl
+        assert action in ["stop","trigger"]
+        self._action = action
+
+    async def setup(self):
+        pass
+
+    async def main(self):
+
+        take_action = False
+
+        for m in self._marbl_list:
+            if m.is_triggered() and m.trigger.cause != "stop":
+                take_action = True
+                patient_zero = m
+                break
+
+        if self._root_marbl.is_triggered():
+            take_action = True
+            patient_zero = m
+
+        #stop all others before stopping the root marbl
+        if take_action:
+            if self._action=="stop":
+                await asyncio.gather(*[m.stop() for m in self._marbl_list if m != patient_zero])
+                await self._root_marbl.stop()
+            else:
+                [m.trigger.set_as_cascade() for m in self._marbl_list if m != patient_zero]
+
+            #stop monitoring
+            self.trigger.set_as_cascade()
+
+    async def _pre_run(self):
+        #override this because Monitor is special
+        pass

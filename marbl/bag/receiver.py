@@ -1,4 +1,4 @@
-from ..base import Marbl
+from marbl import Marbl
 
 class Receiver(Marbl):
     def __init__(self, *, conn):
@@ -10,8 +10,4 @@ class Receiver(Marbl):
     async def main(self):
         await self._conn.process_events(num_cycles=1)
 
-    async def pre_run(self):
-        pass
 
-    async def post_run(self):
-        pass

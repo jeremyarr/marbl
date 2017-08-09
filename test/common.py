@@ -72,7 +72,7 @@ class MarblTestCase(unittest.TestCase):
 
     async def GIVEN_MarblRunOnceNTimes(self,n):
         for i in range(n):
-            await self.marbl_obj.run_once()
+            await self.marbl_obj.run_once(show_errors=False)
 
     async def WHEN_MarblRunOnceNTimes(self,*args,**kwargs):
         await self.GIVEN_MarblRunOnceNTimes(*args, **kwargs)
@@ -113,15 +113,10 @@ class MarblTestCase(unittest.TestCase):
         await chan.publish(msg=msg,exchange_name=exchange_name, 
                 routing_key=routing_key)
 
-    # async def WHEN_MarblRunInBackground(self,*, num_cycles, interval):
-    #     _, launched = marbl.create_task(
-    #                     self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
-    #                   )
-    #     await launched
-
     async def WHEN_MarblRunInBackground(self,*, num_cycles, interval):
         _, launched = self.marbl_obj.create_task(
-                        self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
+                        self.marbl_obj.run(num_cycles=num_cycles,interval=interval),
+                        show_errors=False
                       )
         await launched
 
@@ -129,11 +124,10 @@ class MarblTestCase(unittest.TestCase):
         await self.WHEN_MarblRunInBackground(*args, **kwargs)
 
     async def WHEN_MarblRunInForeground(self,*, num_cycles, interval):
-        await self.marbl_obj.run(num_cycles=num_cycles,interval=interval)
+        await self.marbl_obj.run(num_cycles=num_cycles,interval=interval, show_errors=False)
 
     async def StopMarbl(self, timeout=1):
         await self.marbl_obj.stop(timeout=timeout)
-
 
 
     async def GIVEN_NMarblsSetup(self,*, n, marbl_cls, **kwargs):
@@ -146,7 +140,8 @@ class MarblTestCase(unittest.TestCase):
     async def GIVEN_AllMarblsAreRunningInBackground(self,*,num_cycles, interval):
         for m in self.marbl_list:
             _, launched = self.marbl_obj.create_task(
-                            m.run(num_cycles=num_cycles,interval=interval)
+                            m.run(num_cycles=num_cycles,interval=interval),
+                            show_errors=False
                           )
             await launched
 
@@ -214,7 +209,7 @@ class MarblTestCase(unittest.TestCase):
 
     async def WHEN_MarblRunOnceInBackground(self):
         _, launched = self.marbl_obj.create_task(
-                        self.marbl_obj.run_once()
+                        self.marbl_obj.run_once(), show_errors=False
                       )
         await launched
 

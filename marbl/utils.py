@@ -23,3 +23,8 @@ def create_task(coro_obj):
 
     launched = loop.create_future()
     return loop.create_task(task_wrapper(coro_obj, launched)), launched
+
+async def create_multiple_tasks(coro_obj_list):
+    for coro_obj in coro_obj_list:
+        _, launched = create_task(coro_obj)
+        await launched
