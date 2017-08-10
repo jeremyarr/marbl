@@ -1,6 +1,6 @@
 import os
 
-from ..base import Marbl
+from marbl import Marbl
 
 class Ticker(Marbl):
     def __init__(self, *, conn, parent_name, parent_version, show=True):
@@ -38,8 +38,3 @@ class Ticker(Marbl):
                     self._tick, self._parent_name, 
                     self._parent_version, self._pid))
 
-    async def pre_run(self):
-        pass
-
-    async def post_run(self):
-        pass

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 
-from ..base import Marbl
+from marbl import Marbl
 
 class RabbitLogQueueTimeout(Exception):
     pass
@@ -87,12 +87,6 @@ class Logger(Marbl):
                     routing_key=topic
                   )
 
-    async def pre_run(self):
-        pass
-
-    async def post_run(self):
-        pass
-
     def _create_logger(self):
         logger = logging.getLogger(self._app_name)
         logger.setLevel(logging.DEBUG)
@@ -112,4 +106,6 @@ class Logger(Marbl):
         form = logging.Formatter(fmt="%(asctime)s: %(levelname)s: %(marbl_name)s: %(name)s (%(process)d): %(message)s")
         hdlr.setFormatter(form)
         return hdlr
+
+
 
