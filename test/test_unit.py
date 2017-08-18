@@ -12,7 +12,7 @@ import mooq
 import os
 import time
 
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class DummyTest(common.MarblTestCase):
 
 
@@ -123,7 +123,7 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy()
               )
 
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_NotTriggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -132,9 +132,9 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy()
               )
 
-        self.WHEN_TriggerMarblAsError(exc_obj=ValueError(),tb_str="fake_tb_str")
+        self.WHEN_TriggerAsError(exc_obj=ValueError(),tb_str="fake_tb_str")
 
-        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
+        self.THEN_TriggeredWithCause("error",error_type=ValueError)
 
 
     # @unittest.skip("skipped")
@@ -148,7 +148,7 @@ class DummyTest(common.MarblTestCase):
         await self.WHEN_MarblRunOnceNTimes(1)
 
 
-        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
+        self.THEN_TriggeredWithCause("error",error_type=ValueError)
 
 
     # @unittest.skip("skipped")
@@ -160,18 +160,18 @@ class DummyTest(common.MarblTestCase):
 
         await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
 
-        self.THEN_MarblIsTriggeredWithCause("error",error_type=ValueError)
+        self.THEN_TriggeredWithCause("error",error_type=ValueError)
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
-    async def test_triggered_after_running_once(self):
+    async def test_not_triggered_after_running_once(self):
         await self.GIVEN_MarblSetup(
                 marbl.bag.Dummy()
               )
 
         await self.WHEN_MarblRunOnceNTimes(1)
 
-        self.THEN_MarblIsTriggered()
+        self.THEN_NotTriggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -180,37 +180,37 @@ class DummyTest(common.MarblTestCase):
                 marbl.bag.Dummy()
               )
 
-        await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.2)
+        await self.WHEN_MarblRunInForeground(num_cycles=2, interval=0.01)
 
-        self.THEN_MarblIsTriggered()
+        self.THEN_NotTriggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
-    async def test_trigger_reset_before_running_once_again(self):
+    async def test_still_triggered_after_running_once(self):
         await self.GIVEN_MarblSetup(
                 marbl.bag.Dummy(sleep_lightly_for=5)
               )
 
-        self.GIVEN_TriggerMarblAsStop()
+        self.GIVEN_TriggerAsStop()
 
         await self.WHEN_MarblRunOnceInBackground()
 
         self.THEN_MarblIsRunning()
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_Triggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
-    async def test_trigger_reset_before_running_again(self):
+    async def test_still_triggered_after_running(self):
         await self.GIVEN_MarblSetup(
                 marbl.bag.Dummy(sleep_lightly_for=5)
               )
 
-        self.GIVEN_TriggerMarblAsStop()
+        self.GIVEN_TriggerAsStop()
 
-        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=0.2)
+        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=0.01)
 
         self.THEN_MarblIsRunning()
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_Triggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -242,7 +242,7 @@ class DummyTest(common.MarblTestCase):
 
         await self.WHEN_MarblRunInBackground(num_cycles=2, interval=0.2)
 
-        self.THEN_MarblIsTriggeredWithCause("error",error_type=marbl.AlreadyRunning)
+        self.THEN_TriggeredWithCause("error",error_type=marbl.AlreadyRunning)
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -255,7 +255,7 @@ class DummyTest(common.MarblTestCase):
 
         await self.WHEN_MarblRunOnceInBackground()
 
-        self.THEN_MarblIsTriggeredWithCause("error",error_type=marbl.AlreadyRunning)
+        self.THEN_TriggeredWithCause("error",error_type=marbl.AlreadyRunning)
 
 
 
@@ -264,7 +264,7 @@ class DummyTest(common.MarblTestCase):
 
 
 
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class SleepLightlyTest(common.MarblTestCase):
 
     async def async_setUp(self):
@@ -312,7 +312,7 @@ class SleepLightlyTest(common.MarblTestCase):
 
 
 
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class TickerTest(common.MarblTestCase):
 
     async def async_setUp(self):
@@ -328,8 +328,8 @@ class TickerTest(common.MarblTestCase):
         await self.GIVEN_MarblSetup(
                 marbl.bag.Ticker(
                     conn=self.conn,
-                    parent_name="fake_parent",
-                    parent_version="fake_version",
+                    marbl_name="fake_parent",
+                    marbl_version="fake_version",
                     show=False
                 )
               )
@@ -377,7 +377,7 @@ class TickerTest(common.MarblTestCase):
         )
 
 
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class ReceiverTest(common.MarblTestCase):
 
     async def async_setUp(self):
@@ -398,12 +398,11 @@ class ReceiverTest(common.MarblTestCase):
                 chan_name="chan2"
               )
 
+        marbl.Receiver.already_exists.clear()
+
         await self.GIVEN_MarblSetup(
-                marbl.bag.Receiver(conn=self.conn)
+                marbl.Receiver(conn=self.conn)
               )
-
-
-
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -420,7 +419,18 @@ class ReceiverTest(common.MarblTestCase):
         self.THEN_CallbackCalledNTimes(1)
         self.THEN_LastCallbackMessageIs("fake message")
 
-# @unittest.skip("skipped") 
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_cant_run_multiple_at_the_same_time(self):
+        await self.WHEN_MarblRunInBackground(num_cycles=2, interval=2)
+
+        with self.assertRaises(marbl.MultipleMarblError):
+            marbl.Receiver(conn=self.conn)
+
+
+
+
+@unittest.skip("skipped") 
 class LoggerTest(common.MarblTestCase):
 
     async def async_setUp(self):
@@ -477,42 +487,7 @@ class LoggerTest(common.MarblTestCase):
         self.THEN_LastCallbackRoutingKeyIs("fake_micro.marbl.{}.{}".format(os.getpid(), severity))
 
 
-# @unittest.skip("skipped") 
-class MonitorTriggererTest(common.MarblTestCase):
-
-    async def async_setUp(self):
-        await super().async_setUp()
-
-        await self.GIVEN_NMarblsSetup(
-            n=10, marbl_cls=marbl.bag.Dummy)
-
-        await self.GIVEN_MarblSetup(
-                marbl.Monitor(marbl_list=self.marbl_list,root_marbl=marbl.bag.Dummy(), action="trigger")
-              )
-
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_trigger_one_as_stop_doesnt_trigger_all(self):
-        self.GIVEN_TriggerIthMarblInListAsStop(4)
-        await self.WHEN_MarblRunOnceNTimes(1)
-        self.THEN_AllMarblsAreNotTriggeredExcept(4)
-
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_trigger_one_as_error_triggers_all_as_cascade(self):
-        self.GIVEN_TriggerIthMarblInListAsError(4)
-        await self.WHEN_MarblRunOnceNTimes(1)
-        self.THEN_AllMarblsAreTriggeredAsCascadeExcept(4)
-
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_no_triggers(self):
-        await self.WHEN_MarblRunOnceNTimes(1)
-        self.THEN_AllMarblsAreNotTriggered()
-
-
-
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class MonitorStopperTest(common.MarblTestCase):
 
     async def async_setUp(self):
@@ -522,38 +497,33 @@ class MonitorStopperTest(common.MarblTestCase):
             n=10, marbl_cls=marbl.bag.Dummy, 
             sleep_for=0,
             sleep_lightly_for=5)
-
         await self.GIVEN_MarblSetup(
-                marbl.Monitor(marbl_list=self.marbl_list, root_marbl=marbl.bag.Dummy())
+                marbl.bag.Dummy()
               )
         await self.GIVEN_AllMarblsAreRunningInBackground(num_cycles=2, interval=2)
-
-
-    # @unittest.skip("skipped")
-    @younit.asyncio_test
-    async def test_stop_one_doesnt_stop_all(self):
-        await self.GIVEN_StopIthMarbl(4)
-        await self.WHEN_MarblRunOnceNTimes(1)
-        self.THEN_AllMarblsAreRunningExcept(4)
-
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
     async def test_trigger_one_as_error_stops_all(self):
-        self.GIVEN_TriggerIthMarblInListAsError(4)
-        await self.WHEN_MarblRunOnceNTimes(1)
+        self.GIVEN_TriggerAsError()
+        await asyncio.sleep(0.1)
+        self.THEN_AllMarblsAreNotRunning()
+
+    # @unittest.skip("skipped")
+    @younit.asyncio_test
+    async def test_trigger_one_as_remote_stop_stops_all(self):
+        self.GIVEN_TriggerAsRemoteStop()
+        await asyncio.sleep(0.1)
         self.THEN_AllMarblsAreNotRunning()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
     async def test_no_triggers_no_stops(self):
-        await self.WHEN_MarblRunOnceNTimes(1)
         self.THEN_AllMarblsAreRunning()
 
 
-# @unittest.skip("skipped") 
+@unittest.skip("skipped") 
 class RemoteControlTest(common.MarblTestCase):
-
     async def async_setUp(self):
         await super().async_setUp()
 
@@ -569,7 +539,7 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+        self.THEN_TriggeredWithCause("remote_stop")
 
 
     # @unittest.skip("skipped")
@@ -580,7 +550,7 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_NotTriggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -590,7 +560,7 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+        self.THEN_TriggeredWithCause("remote_stop")
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -600,7 +570,7 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+        self.THEN_TriggeredWithCause("remote_stop")
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -610,7 +580,7 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_NotTriggered()
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -619,8 +589,8 @@ class RemoteControlTest(common.MarblTestCase):
         await self.GIVEN_SendRemoteStopCommandWithRoutingKey("fake_marbl.all.not_set")
 
         await self.WHEN_ProcessEventsNTimes(20)
-        
-        self.THEN_MarblIsTriggeredWithCause("remote_stop")
+
+        self.THEN_TriggeredWithCause("remote_stop")
 
     # @unittest.skip("skipped")
     @younit.asyncio_test
@@ -630,18 +600,10 @@ class RemoteControlTest(common.MarblTestCase):
 
         await self.WHEN_ProcessEventsNTimes(20)
         
-        self.THEN_MarblIsNotTriggered()
+        self.THEN_NotTriggered()
 
 
 
-
-
-    async def GIVEN_SendRemoteStopCommandWithRoutingKey(self, routing_key):
-        await self.GIVEN_ProducerRegisteredOnNewChannel( 
-                        exchange_name="supervisor", exchange_type="topic")
-
-        await self.GIVEN_PublishMessage(exchange_name="supervisor", msg=["stop"], 
-                routing_key=routing_key)
 
 
 if __name__ == '__main__':

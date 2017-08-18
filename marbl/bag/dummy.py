@@ -1,29 +1,43 @@
-from marbl import Marbl
 import asyncio
+import argparse
+
+import mooq
+
+from marbl import Marbl, add_standard_options, create_logger
+
 
 class Dummy(Marbl):
-    def __init__(self, raise_error=None, 
-            sleep_for=0.01, sleep_lightly_for=0,
-            show=False):
-
-        self.raise_error = raise_error
-        self.sleep_for = sleep_for
-        self.sleep_lightly_for = sleep_lightly_for
-        self.show =show
+    def __init__(self, *, conn, logger):
+        self._conn = conn
+        self._logger = logger
 
     async def setup(self):
         pass
 
     async def main(self):
-        if self.show:
-            print("dummy cycle")
-        if self.sleep_for:
-            await asyncio.sleep(self.sleep_for)
-        if self.sleep_lightly_for:
-            await self.sleep_lightly(self.sleep_lightly_for)
-
-        if self.raise_error:
-            raise self.raise_error
+        await self.sleep_lightly(2)
+        raise ValueError
 
 
+async def main(args):
+    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
+    logger = create_logger(app_name=args.app_name, marbl_name=args.marbl_name)
+    marbl_obj = Dummy(
+                    conn=conn,
+                    logger=logger,
+                )
 
+    await marbl_obj.setup()
+
+    await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="a marbl that comes with all the standard marbls")
+
+    add_standard_options(parser, default_marbl_name="dummy")
+
+    args = parser.parse_args()
+    print(args)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main(args))

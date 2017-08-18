@@ -1,13 +1,20 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import traceback
+import functools
+import os
+import time
+import datetime
 
-from .utils import create_multiple_tasks
+# from .utils import create_multiple_tasks
 
 class StopTimeout(Exception):
     pass
 
 class AlreadyRunning(Exception):
+    pass
+
+class MultipleMarblError(Exception):
     pass
 
 class MutableBool(object):
@@ -38,7 +45,6 @@ class Trigger(MutableBool):
         super().__init__(*args,**kwargs)
         self._clear_trigger_metadata()
 
-
     def set_as_error(self, exc_obj, tb_str):
         self.set_()
         self.cause = "error"
@@ -68,6 +74,7 @@ class Trigger(MutableBool):
 
 
 def runner(func):
+    @functools.wraps(func)
     async def inner(self, *args, **kwargs):
         try:
             show_errors=kwargs['show_errors']
@@ -78,21 +85,24 @@ def runner(func):
         if self.is_running():
             raise AlreadyRunning
 
-        self.trigger.clear()
         self._running.set_()
         self.has_stopped = asyncio.get_event_loop().create_future()
         try:
             await self._pre_run()
+            await self.pre_run()
             await func(self, *args, **kwargs)
             await self.post_run()
         except Exception as e:
             tb_str = traceback.format_exc()
             if show_errors:
-                print("AN ERRROR OCCURRED")
-                print(tb_str)
+                err_msg = "AN ERRROR OCCURRED\n {}".format(tb_str)
+                print(err_msg)
+                try:
+                    self._logger.error(err_msg)
+                    await asyncio.sleep(0.5)
+                except AttributeError:
+                    pass
             self.trigger.set_as_error(e, tb_str)
-        else:
-            self.trigger.set_as_stop()
         finally:
             self._running.clear()
             self.has_stopped.set_result(None)
@@ -104,6 +114,8 @@ def runner(func):
 class Marbl(metaclass=ABCMeta):
 
     version = "not_set"
+    trigger = Trigger(False)
+
 
     @abstractmethod
     async def setup(self, *args, **kwargs):
@@ -112,32 +124,103 @@ class Marbl(metaclass=ABCMeta):
     def register(self, *args, **kwargs):
         return []
 
+    def register_standard_marbls(self):
+        return [
+            self.register_receiver(),
+            self.register_logger(),
+            self.register_ticker(),
+            self.register_remote_control(),
+            ]
+
+
+    def register_receiver(self):
+        try: 
+            receiver_obj = Receiver(conn=self._conn)
+        except MultipleMarblError:
+            return None
+        except AttributeError:
+            return None
+        else:
+            return {
+                     "marbl_obj":receiver_obj,
+                     "run_method":"run",
+                     "interval":0.1,
+                    }
+
+    def register_logger(self):
+        try: 
+            logger_obj = Logger(conn=self._conn,logger=self._logger)
+        except MultipleMarblError:
+            return None
+        except AttributeError:
+            return None
+        else:
+            return {
+                     "marbl_obj":logger_obj,
+                     "run_method":"run",
+                     "interval":0.1,
+                    }
+
+    def register_ticker(self):
+        try: 
+            ticker_obj = Ticker(conn=self._conn,logger=self._logger, 
+                            marbl_name=self.__class__.__name__.lower(), 
+                            marbl_version=self.version)
+        except MultipleMarblError:
+            return None
+        except AttributeError:
+            return None
+        else:
+            return {
+                     "marbl_obj":ticker_obj,
+                     "run_method":"run",
+                     "interval":2,
+                    }
+
+    def register_remote_control(self):
+        try: 
+            remote_control_obj = RemoteControl(conn=self._conn,logger=self._logger, 
+                                    marbl_name=self.__class__.__name__.lower())
+        except MultipleMarblError:
+            return None
+        except AttributeError:
+            return None
+        else:
+            return {
+                     "marbl_obj":remote_control_obj,
+                     "run_method":"do_not_run",
+                    }
+
+
     async def _pre_run(self):
         registry = self.register()
-        to_monitor = []
+        registry.extend(self.register_standard_marbls())
+
         to_schedule = []
 
         for r in registry:
+            if not r:
+                continue
+
             await r['marbl_obj'].setup()
-            if r['monitor']:
-                to_monitor.append(r['marbl_obj'])
 
             if r['run_method'] == "run":
                 coro_obj = r['marbl_obj'].run(interval=r['interval'])
                 to_schedule.append(coro_obj)
+            elif r['run_method'] == "do_not_run":
+                pass
             else:
                 raise NotImplementedError
 
-        #must always monitor yourself to see if any sub tasks
-        #have caused trigger to be set
-        if to_monitor:
-            # to_monitor.append(self)
-            mon = Monitor(marbl_list=to_monitor, root_marbl=self)
-            to_schedule.append(mon.run(interval=0.1))
 
-        await create_multiple_tasks(to_schedule)
+        for coro_obj in to_schedule:
+            _, launched = self.create_task(coro_obj)
+            await launched
 
 
+
+    async def pre_run(self, *args, **kwargs):
+        pass
 
     @abstractmethod
     async def main(self, *args, **kwargs):
@@ -172,10 +255,9 @@ class Marbl(metaclass=ABCMeta):
                     break
 
 
-    async def stop(self, timeout=5):
-        # print("stopping {}".format(self.__class__.__name__))
-        self.trigger.set_as_stop()
-
+    async def stop(self, timeout=1):
+        if not self.trigger:
+            self.trigger.set_as_stop()
         try:
             done, pending = await asyncio.wait([self.has_stopped], timeout=timeout)
         except AttributeError:
@@ -183,10 +265,12 @@ class Marbl(metaclass=ABCMeta):
         else:
             if pending:
                 raise StopTimeout
-        # print("stopped {}".format(self.__class__.__name__))
+
+
+
 
     async def sleep_lightly(self,interval):
-        num_cycles,frac_secs = divmod(interval, 0.1)
+        num_cycles, frac_secs = divmod(interval, 0.1)
 
         for x in range(int(num_cycles)):
             if self.trigger:
@@ -199,16 +283,6 @@ class Marbl(metaclass=ABCMeta):
     def is_running(self):
         return self._running == True
 
-    def is_triggered(self):
-        return self.trigger == True
-
-    @property
-    def trigger(self):
-        try:
-            return self._trigger
-        except AttributeError:
-            self._trigger = Trigger(False)
-            return self._trigger
 
     @property
     def _running(self):
@@ -242,49 +316,192 @@ class Marbl(metaclass=ABCMeta):
             except Exception as e:
                 tb_str = traceback.format_exc()
                 if show_errors:
-                    print("AN ERRROR OCCURRED")
-                    print(tb_str)
+                    err_msg = "AN ERRROR OCCURRED\n {}".format(tb_str)
+                    print(err_msg)
+                    try:
+                        self._logger.error(err_msg)
+                        await asyncio.sleep(0.5)
+                    except AttributeError:
+                        pass
+
+
                 self.trigger.set_as_error(e, tb_str)
 
 
+
         launched = loop.create_future()
+
         return loop.create_task(task_wrapper(coro_obj, launched)), launched
 
-class Monitor(Marbl):
-    def __init__(self, *, marbl_list, root_marbl, action="stop"):
-        self._marbl_list = marbl_list
-        self._root_marbl = root_marbl
-        assert action in ["stop","trigger"]
-        self._action = action
+
+
+
+class Receiver(Marbl):
+
+    already_exists = MutableBool(False)
+
+    def __init__(self, *, conn):
+        self._conn = conn
+
+        if self.already_exists:
+            raise MultipleMarblError("tried to instantiate another Receiver")
+        else:
+            self.already_exists.set_()
 
     async def setup(self):
         pass
 
+    def register_standard_marbls(self):
+        return []
+
     async def main(self):
+        await self._conn.process_events(num_cycles=1)
 
-        take_action = False
 
-        for m in self._marbl_list:
-            if m.is_triggered() and m.trigger.cause != "stop":
-                take_action = True
-                patient_zero = m
-                break
+class Logger(Marbl):
 
-        if self._root_marbl.is_triggered():
-            take_action = True
-            patient_zero = m
+    already_exists = MutableBool(False)
 
-        #stop all others before stopping the root marbl
-        if take_action:
-            if self._action=="stop":
-                await asyncio.gather(*[m.stop() for m in self._marbl_list if m != patient_zero])
-                await self._root_marbl.stop()
-            else:
-                [m.trigger.set_as_cascade() for m in self._marbl_list if m != patient_zero]
+    def __init__(self, *, conn, logger):
+        self._conn = conn
+        self.logger = logger
 
-            #stop monitoring
-            self.trigger.set_as_cascade()
+        if self.already_exists:
+            raise MultipleMarblError("tried to instantiate another Logger")
+        else:
+            self.already_exists.set_()
 
-    async def _pre_run(self):
-        #override this because Monitor is special
+    async def setup(self):
+        self._chan = await self._conn.create_channel()
+        await self._chan.register_producer(exchange_name="log",
+                exchange_type="topic")
+
+    def register_standard_marbls(self):
+        return []
+
+    async def main(self):
+        try:
+            msg, topic = await asyncio.wait_for(self.logger.log_queue.get(),0.1)
+        except asyncio.TimeoutError:
+            pass
+        else:
+            await self._chan.publish(
+                    exchange_name="log",
+                    msg=msg,
+                    routing_key=topic
+                  )
+
+
+class Ticker(Marbl):
+
+    already_exists = MutableBool(False)
+
+    def __init__(self, *, conn, marbl_name, marbl_version, logger, show=True, publish=True):
+        self._conn = conn
+        self._tick = 0
+        self._marbl_version = marbl_version
+        self._marbl_name = marbl_name
+        self._pid = os.getpid()
+        self._show = show
+        self._publish = publish
+        self._started = time.time()
+        self._logger = logger
+
+        if self.already_exists:
+            raise MultipleMarblError("tried to instantiate another Logger")
+        else:
+            self.already_exists.set_()
+
+    async def setup(self):
+        self._chan = await self._conn.create_channel()
+        await self._chan.register_producer(exchange_name="heartbeat",
+                exchange_type="direct")
+
+    def register_standard_marbls(self):
+        return []
+
+    def _construct_msg(self):
+        return {
+                "tick":self._tick,
+                "version":self._marbl_version,
+                "name": self._marbl_name,
+                "pid": self._pid,
+                "started": self._started
+              }
+
+    async def main(self):
+        self._tick = self._tick + 1
+
+        if self._publish:
+            await self._chan.publish(
+                    exchange_name="heartbeat",
+                    msg=self._construct_msg(),
+                    routing_key=""
+                  )
+
+        iso_str = datetime.datetime.utcfromtimestamp(self._started).isoformat()
+        tick_msg = "tick {} {} {} ({}) started {}".format(
+                    self._tick, self._marbl_name, 
+                    self._marbl_version, self._pid, iso_str)
+
+        if self._show:
+            print(tick_msg)
+
+        self._logger.debug(tick_msg)
+
+class RemoteControl(Marbl):
+    already_exists = MutableBool(False)
+
+    def __init__(self, *, conn, logger, marbl_name):
+        self._conn = conn
+        self._logger = logger
+        self._marbl_name = marbl_name
+
+        if self.already_exists:
+            raise MultipleMarblError("tried to instantiate another RemoteControl")
+        else:
+            self.already_exists.set_()
+
+
+    def register_standard_marbls(self):
+        return []
+
+
+    async def setup(self):
+        self._chan = await self._conn.create_channel()
+        routing_keys =[ 
+                        "{}.all.all".format(self._marbl_name), #all <marbl_name> micros (any version)
+                        "{}.all.{}".format(self._marbl_name,self.version), #all <marbl_name> micros (with version <version>)
+                        "all.all.all", #all micros (any version)
+                        "all.{}.all".format(os.getpid()),#any micro with pid <pid>
+                      ]
+
+        await self._chan.register_consumer(exchange_name="supervisor",
+                exchange_type="topic", routing_keys=routing_keys,
+                callback=self.take_action,
+                create_task_meth=self.create_task)
+        
+    async def main(self):
         pass
+
+    async def take_action(self, resp):
+        self.trigger.set_as_remote_stop()
+
+
+
+
+
+def add_std_non_logging_options(parser):
+    parser.add_argument("-interval", type=float, default=1, help="delay between cycles")
+    parser.add_argument("-num_cycles",type=int, default=None, help="number of cycles to run for")
+
+    parser.add_argument("-port", default=5672, type=int, help="broker port")
+    parser.add_argument("-host", default="localhost", type=str, help="broker host")
+    parser.add_argument("-broker", default="rabbit", type=str, help="broker type")
+
+
+def add_standard_options(parser, default_marbl_name="marbl_name"):
+    add_std_non_logging_options(parser)
+
+    parser.add_argument("-marbl_name", default=default_marbl_name, help="name of the marbl for logging purposes")
+    parser.add_argument("-app_name", default="marbl", help="name of the app for logging purposes")
