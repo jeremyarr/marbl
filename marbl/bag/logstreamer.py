@@ -36,7 +36,27 @@ class LogStreamer(Marbl):
         pass
 
     async def take_action(self, resp):
-        print(resp['msg'])
+        msg = resp['msg']
+        splitted_msg = msg.split(":")
+        fields_to_remove = []
+
+        if self._hide_date:
+            fields_to_remove.append(0)
+            fields_to_remove.append(1)
+            fields_to_remove.append(2)
+        if self._hide_severity:
+            fields_to_remove.append(3)
+        if self._hide_marbl:
+            fields_to_remove.append(4)
+        if self._hide_app:
+            fields_to_remove.append(5)
+
+        for i in sorted(fields_to_remove,reverse=True):
+            del splitted_msg[i]
+
+        out = ":".join(splitted_msg)
+        print("{}".format(out))
+        # print(resp['msg'])
 
 
     def generate_topics(self):
@@ -62,6 +82,12 @@ class LogStreamer(Marbl):
 
 async def main(args):
     conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
+    if args.hide_all:
+        args.hide_date = True
+        args.hide_severity = True
+        args.hide_marbl = True
+        args.hide_app = True
+
 
     marbl_obj = LogStreamer(
                     conn=conn,
@@ -78,11 +104,7 @@ async def main(args):
     await marbl_obj.setup()
     await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
 
-
-
-
-
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="responds to remote control commands")
     parser.add_argument("--marbl_name", default="*", help="name of the marbl to view logs of")
     parser.add_argument("--app_name",default="*",
@@ -100,6 +122,8 @@ if __name__ == "__main__":
                         help="hide marbl field")
     parser.add_argument("--hide_app", action="store_true",
                         help="hide app field")
+    parser.add_argument("--hide_all", action="store_true",
+                        help="hide all fields")
     add_std_non_logging_options(parser)
 
     args = parser.parse_args()
@@ -112,20 +136,5 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-    parser.add_argument("exchange_name", help="name of the exchange to publish to")
-    parser.add_argument("msg", help="message to publish")
-    parser.add_argument("routing_key", help="routing key of message")
-    parser.add_argument("exchange_type",choices=["direct", "topic", "fanout"], help="exchange type")
-
-    add_standard_options(parser)
-
-    args = parser.parse_args()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(args))
+if __name__ == "__main__":
+    cli()

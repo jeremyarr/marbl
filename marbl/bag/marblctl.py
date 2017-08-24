@@ -64,7 +64,7 @@ async def main(args):
     await marbl_obj.setup()
     await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="control and monitor marbls via the supervisor")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--stop_supervisor",action="store_true",help="stop the supervisor")
@@ -77,3 +77,7 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(args))
+
+
+if __name__ == "__main__":
+    cli()

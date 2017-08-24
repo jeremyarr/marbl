@@ -6,7 +6,7 @@ import os
 import mooq
 
 from marbl import Marbl, add_standard_options, create_logger
-from marbl.bag import Dummy
+
 
 class Alive(object):
     def __init__(self, hb):
@@ -149,8 +149,7 @@ async def main(args):
     await marbl_obj.setup()
     await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
 
-
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="supervisor of marbls")
     add_standard_options(parser, default_marbl_name="supervisor")
 
@@ -160,6 +159,11 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(args))
+
+
+
+if __name__ == "__main__":
+    cli()
 
 
 

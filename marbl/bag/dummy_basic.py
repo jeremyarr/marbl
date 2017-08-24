@@ -48,9 +48,7 @@ async def main(args):
     await marbl_obj.setup()
     await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
 
-
-
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="a placeholder marbl")
     parser.add_argument("-sleep_for", default=0.01, type=float, help="number of seconds to asyncio.sleep for")
     parser.add_argument("-sleep_lightly_for",default=0,type=float, help="number of seconds to asyncio.sleep_lightly for")
@@ -67,3 +65,8 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(args))
+
+
+if __name__ == "__main__":
+    cli()
+

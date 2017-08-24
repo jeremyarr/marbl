@@ -99,7 +99,7 @@ def runner(func):
                 print(err_msg)
                 try:
                     self._logger.error(err_msg)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
                 except AttributeError:
                     pass
             self.trigger.set_as_error(e, tb_str)
@@ -255,19 +255,6 @@ class Marbl(metaclass=ABCMeta):
                     break
 
 
-    async def stop(self, timeout=1):
-        if not self.trigger:
-            self.trigger.set_as_stop()
-        try:
-            done, pending = await asyncio.wait([self.has_stopped], timeout=timeout)
-        except AttributeError:
-            pass
-        else:
-            if pending:
-                raise StopTimeout
-
-
-
 
     async def sleep_lightly(self,interval):
         num_cycles, frac_secs = divmod(interval, 0.1)
@@ -320,7 +307,7 @@ class Marbl(metaclass=ABCMeta):
                     print(err_msg)
                     try:
                         self._logger.error(err_msg)
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(1)
                     except AttributeError:
                         pass
 
@@ -500,8 +487,8 @@ def add_std_non_logging_options(parser):
     parser.add_argument("-broker", default="rabbit", type=str, help="broker type")
 
 
-def add_standard_options(parser, default_marbl_name="marbl_name"):
+def add_standard_options(parser, default_marbl_name="marbl_name", default_app_name="marbl"):
     add_std_non_logging_options(parser)
 
     parser.add_argument("-marbl_name", default=default_marbl_name, help="name of the marbl for logging purposes")
-    parser.add_argument("-app_name", default="marbl", help="name of the app for logging purposes")
+    parser.add_argument("-app_name", default=default_app_name, help="name of the app for logging purposes")

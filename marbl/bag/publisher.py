@@ -2,13 +2,14 @@ import os
 import argparse
 import asyncio
 
-from marbl import Marbl, add_standard_options
-
+from marbl import Marbl, add_standard_options, create_logger
+    
 import mooq
 
 class Publisher(Marbl):
-    def __init__(self, *, conn, exchange_name, exchange_type, msg, routing_key, show=True):
+    def __init__(self, *, conn, logger, exchange_name, exchange_type, msg, routing_key, show=True):
         self._conn = conn
+        self._logger = logger
         self._exchange_name = exchange_name
         self._exchange_type = exchange_type
         self._msg = msg
@@ -35,9 +36,10 @@ class Publisher(Marbl):
 
 async def main(args):
     conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
-
+    logger = create_logger(app_name=args.app_name, marbl_name=args.marbl_name)
     marbl_obj = Publisher(
                     conn=conn,
+                    logger=logger,
                     exchange_name=args.exchange_name,
                     exchange_type=args.exchange_type,
                     msg=args.msg,
@@ -47,8 +49,9 @@ async def main(args):
     await marbl_obj.setup()
     await marbl_obj.run(interval=args.interval, num_cycles=args.num_cycles)
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="a flexible message publisher")
+
 
     parser.add_argument("exchange_name", help="name of the exchange to publish to")
     parser.add_argument("msg", help="message to publish")
@@ -61,3 +64,6 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(args))
+
+if __name__ == "__main__":
+    cli()
