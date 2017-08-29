@@ -81,7 +81,13 @@ class LogStreamer(Marbl):
 
 
 async def main(args):
-    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker, virtual_host=args.virtual_host)
+    conn = await mooq.connect(
+                    host=args.host, 
+                    port=args.port, 
+                    broker=args.broker, 
+                    virtual_host=args.virtual_host,
+                    user=args.user,
+                    passwd=args.passwd)
     if args.hide_all:
         args.hide_date = True
         args.hide_severity = True

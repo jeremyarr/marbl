@@ -486,6 +486,8 @@ def add_std_non_logging_options(parser):
     parser.add_argument("-host", default="localhost", type=str, help="broker host")
     parser.add_argument("-broker", default="rabbit", type=str, help="broker type")
     parser.add_argument("-virtual_host", type=str, help="broker virtual host")
+    parser.add_argument("-user", default="guest", type=str, help="rabbitmq username")
+    parser.add_argument("-passwd", default="guest", type=str, help="rabbitmq password")
 
 def add_standard_options(parser, default_marbl_name="marbl_name", default_app_name="marbl"):
     add_std_non_logging_options(parser)
