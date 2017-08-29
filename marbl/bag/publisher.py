@@ -35,7 +35,7 @@ class Publisher(Marbl):
                     self._msg, self._routing_key))
 
 async def main(args):
-    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
+    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker, virtual_host=args.virtual_host)
     logger = create_logger(app_name=args.app_name, marbl_name=args.marbl_name)
     marbl_obj = Publisher(
                     conn=conn,
@@ -61,6 +61,7 @@ def cli():
     add_standard_options(parser)
 
     args = parser.parse_args()
+    print(args)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(args))

@@ -138,7 +138,7 @@ class Supervisor(Marbl):
 
 
 async def main(args):
-    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
+    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker, virtual_host=args.virtual_host)
     logger = create_logger(app_name=args.app_name, marbl_name=args.marbl_name)
     marbl_obj = Supervisor(
                     conn=conn,

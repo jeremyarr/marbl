@@ -44,7 +44,7 @@ class MarblCtl(Marbl):
         self.trigger.set_as_remote_stop()
 
 async def main(args):
-    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker)
+    conn = await mooq.connect(host=args.host, port=args.port, broker=args.broker, virtual_host=args.virtual_host)
 
     if args.stop_supervisor:
         msg = ["stop_supervisor"]
